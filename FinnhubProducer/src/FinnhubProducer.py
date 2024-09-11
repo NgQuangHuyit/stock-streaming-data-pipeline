@@ -1,12 +1,14 @@
+import json
 import os
 import time
-from confluent_kafka import Producer
-import websocket
 
+import atexit
+import websocket
+from confluent_kafka import Producer
+
+from test import logger
 from utils.common_function import load_schema, serialize_avro
 from utils.logger import Logger
-
-import json
 
 
 class FinnhubProducer:
@@ -33,8 +35,7 @@ class FinnhubProducer:
         self.logger.error(error)
 
     def on_close(self, ws, close_status_code, close_msg):
-        self.producer.flush()
-        self.logger.info("### closed ###")
+        logger.info(f"Connection closed with status code {close_status_code} and message: {close_msg}")
 
 
     def on_open(self, ws):
@@ -55,14 +56,24 @@ class FinnhubProducer:
         else:
             self.logger.error("Max retry attempts reached. Exiting.")
 
-    def stop(self):
-        self.ws.close()
 
     def _producer_delivery_report(self, err, msg):
         if err is not None:
             self.logger.error(f"Message delivery failed: {err}")
         else:
             self.logger.info(f"Message delivered to {msg.topic()} [{msg.partition()}]")
+
+    def _shutdown_hook(self):
+        self.logger.info("Shutting down...")
+        try:
+            self.producer.poll(1000)
+            self.producer.flush()
+            logger.info("Producer flushed successfully.")
+            self.ws.close()
+            logger.info("Websocket connection closed.")
+        except Exception as e:
+            self.logger.error(f"Error during shutdown: {e}")
+        self.logger.info("Shutdown complete.")
 
 if __name__ == "__main__":
     API_KEY = os.getenv("FINNHUB_API_KEY")
@@ -71,11 +82,12 @@ if __name__ == "__main__":
     symbols = ["AAPL", "AMZN", "BINANCE:BTCUSDT", "IC MARKETS:1"]
 
     producer_config = {
-        'bootstrap.servers': "localhost:9092"
+        'bootstrap.servers': os.getenv("KAFKA_BOOTSTRAP_SERVERS"),
     }
     kafka_producer = Producer(producer_config)
     producer = FinnhubProducer(API_KEY, "stock", symbols, kafka_producer, "schemas/trades.avsc")
     producer.start()
+
 
 
 

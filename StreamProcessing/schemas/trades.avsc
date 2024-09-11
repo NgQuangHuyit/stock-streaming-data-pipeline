@@ -1,0 +1,50 @@
+{
+  "type": "record",
+  "namespace": "FinnhubProducer",
+  "name": "message",
+  "fields": [
+    {
+      "name": "data",
+      "type": {
+        "type": "array",
+        "items": {
+          "type": "record",
+          "name": "trade",
+          "fields": [
+            {
+              "name": "c",
+              "type": [
+                {
+                  "type": "array",
+                  "items": ["null", "string"],
+                  "default": []
+                },
+                "null"
+              ]
+            },
+            {
+              "name": "p",
+              "type": "double"
+            },
+            {
+              "name": "s",
+              "type": "string"
+            },
+            {
+              "name": "t",
+              "type": "long"
+            },
+            {
+              "name": "v",
+              "type": "double"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "type",
+      "type": "string"
+    }
+  ]
+}

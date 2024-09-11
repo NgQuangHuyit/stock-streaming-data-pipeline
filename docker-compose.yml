@@ -50,12 +50,59 @@ services:
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka1:19092
       - KAFKA_TOPIC=stock
-      - FINNHUB_API_KEY=YOUR_API_KEY
+      - FINNHUB_API_KEY={Your Finnhub API Key}
     depends_on:
       - kafka1
       - zoo1
     networks:
       - kafka-net
+
+  spark-master:
+    image: docker.io/bitnami/spark:3.5.1
+    user: root
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+    networks:
+      - kafka-net
+    volumes:
+      - ./StreamProcessing:/opt/bitnami/spark/apps
+    ports:
+      - '8080:8080'
+      - '7077:7077'
+  spark-worker1:
+    image: docker.io/bitnami/spark:3.5.1
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+    networks:
+      - kafka-net
+    depends_on:
+      - spark-master
+
+  spark-worker2:
+    image: docker.io/bitnami/spark:3.5.1
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+    networks:
+      - kafka-net
+    depends_on:
+      - spark-master
 
 networks:
     kafka-net:
