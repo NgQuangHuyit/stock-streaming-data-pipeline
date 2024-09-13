@@ -42,6 +42,7 @@ services:
       - kafka-net
   finnhub-producer:
     image: finnhub-producer:latest
+    container_name: finnhub-producer
     build:
       context: ./FinnhubProducer
       dockerfile: Dockerfile
@@ -59,6 +60,7 @@ services:
 
   spark-master:
     image: docker.io/bitnami/spark:3.5.1
+    container_name: spark-master
     user: root
     environment:
       - SPARK_MODE=master
@@ -74,38 +76,39 @@ services:
     ports:
       - '8080:8080'
       - '7077:7077'
-  spark-worker1:
-    image: docker.io/bitnami/spark:3.5.1
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-      - SPARK_USER=spark
-    networks:
-      - kafka-net
-    depends_on:
-      - spark-master
-
-  spark-worker2:
-    image: docker.io/bitnami/spark:3.5.1
-    environment:
-      - SPARK_MODE=worker
-      - SPARK_MASTER_URL=spark://spark-master:7077
-      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-      - SPARK_RPC_ENCRYPTION_ENABLED=no
-      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-      - SPARK_SSL_ENABLED=no
-      - SPARK_USER=spark
-    networks:
-      - kafka-net
-    depends_on:
-      - spark-master
+#  spark-worker1:
+#    image: docker.io/bitnami/spark:3.5.1
+#    environment:
+#      - SPARK_MODE=worker
+#      - SPARK_MASTER_URL=spark://spark-master:7077
+#      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+#      - SPARK_RPC_ENCRYPTION_ENABLED=no
+#      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+#      - SPARK_SSL_ENABLED=no
+#      - SPARK_USER=spark
+#    networks:
+#      - kafka-net
+#    depends_on:
+#      - spark-master
+#
+#  spark-worker2:
+#    image: docker.io/bitnami/spark:3.5.1
+#    environment:
+#      - SPARK_MODE=worker
+#      - SPARK_MASTER_URL=spark://spark-master:7077
+#      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+#      - SPARK_RPC_ENCRYPTION_ENABLED=no
+#      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+#      - SPARK_SSL_ENABLED=no
+#      - SPARK_USER=spark
+#    networks:
+#      - kafka-net
+#    depends_on:
+#      - spark-master
 
   cassandra:
     image: bitnami/cassandra:latest
+    container_name: cassandra
     ports:
       - "9042:9042"
     environment:
@@ -117,6 +120,9 @@ services:
 
   grafana:
     image: grafana/grafana:latest
+    container_name: grafana
+    environment:
+      - GF_INSTALL_PLUGINS=hadesarchitect-cassandra-datasource
     ports:
       - "3000:3000"
     networks:

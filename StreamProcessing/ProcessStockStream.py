@@ -5,7 +5,7 @@ from pyspark.sql.avro.functions import from_avro
 def write_to_cassandra(df, batch_id):
     df.write \
         .format("org.apache.spark.sql.cassandra") \
-        .options(table="table_name", keyspace="market_stock") \
+        .options(table="btc_aggregate", keyspace="stock_market") \
         .mode("append") \
         .save()
 
@@ -47,40 +47,50 @@ if __name__ == "__main__":
         .withColumn("usd_volume", col("price") * col("volume"))  \
         .select("symbol", "price", "volume", "usd_volume", "Timestamp", "cumulative_volume")
 
-    result_df1 = renamed_df \
+    price_df = renamed_df \
+        .select(col("symbol"),
+                col("Timestamp").alias("utc_timestamp"),
+                col("price").alias("curr_price")) \
+
+    cumulative_volume_df = renamed_df \
+        .select(col("symbol"),
+                col("Timestamp").alias("utc_timestamp"),
+                col("cumulative_volume"))
+
+    pnc_df = renamed_df \
         .select(col("symbol"),
                 col("Timestamp").alias("utc_timestamp"),
                 col("cumulative_volume"),
                 col("price").alias("curr_price"))
+
     window_agg_df = renamed_df \
-        .groupby(window(col("Timestamp"), "1 minute"), col("symbol")) \
+        .withWatermark("Timestamp", "1 minutes") \
+        .groupby(window(col("Timestamp"), "30 seconds", "10 seconds"), col("symbol")) \
         .agg(
             sum(col("usd_volume")).alias("total_usd_volume"),
             sum(col("volume")).alias("total_btc_volume"),
-            last(col("price")).alias("last_price"),
+            last(col("price")).alias("close"),
             max(col("price")).alias("high"),
             min(col("price")).alias("low"),
-            count(col("price")).alias("num_trades"),
-            last(col("cumulative_volume")).alias("cumulative_volume")
+            count(col("price")).alias("num_trades")
              )
 
 
 
     result_df = window_agg_df \
-        .select(col("window.start").alias("start_time"),
-                col("window.end").alias("end_time"),
-                col("symbol"),
-                round("total_usd_volume", 2).alias("total_usd_volume"),
-                round("total_btc_volume", 2).alias("total_btc_volume"),
+        .select(col("symbol"),
+                col("window.start").alias("utc_start_ts"),
+                col("window.end").alias("utc_end_ts"),
+                col("total_usd_volume"),
+                col("total_btc_volume"),
                 col("high"),
                 col("low"),
-                col("last_price"),
-                col("num_trades"),
-                col("cumulative_volume")
+                col("close"),
+                col("num_trades")
                 )
 
 
-    query_stream = result_df1.writeStream \
+    query_stream = result_df.writeStream \
         .outputMode("update") \
         .foreachBatch(write_to_cassandra) \
         .option("checkpointLocation", "checkpoint")  \
