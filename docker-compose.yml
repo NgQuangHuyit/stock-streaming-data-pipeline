@@ -104,6 +104,24 @@ services:
     depends_on:
       - spark-master
 
+  cassandra:
+    image: bitnami/cassandra:latest
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_PASSWORD_SEEDER=yes
+      - CASSANDRA_USER=cassandra
+      - CASSANDRA_PASSWORD=password123
+    networks:
+      - kafka-net
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    networks:
+      - kafka-net
+
 networks:
     kafka-net:
         driver: bridge

@@ -37,6 +37,11 @@
             {
               "name": "v",
               "type": "double"
+            },
+            {
+              "name": "cv",
+              "type": "double",
+              "doc": "cumulative volume"
             }
           ]
         }

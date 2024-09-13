@@ -2,11 +2,9 @@ import json
 import os
 import time
 
-import atexit
 import websocket
 from confluent_kafka import Producer
 
-from test import logger
 from utils.common_function import load_schema, serialize_avro
 from utils.logger import Logger
 
@@ -17,6 +15,9 @@ class FinnhubProducer:
         self.producer = producer
         self.topic = topic
         self.symbols = symbols
+        self.cumulative_volume = {}
+        for symbol in symbols:
+            self.cumulative_volume[symbol] = 0
         self.avro_schema = load_schema(schema_path)
         self.producer = producer
         self.logger = Logger(self.__class__.__name__)
@@ -27,6 +28,11 @@ class FinnhubProducer:
                                          on_close=self.on_close)
 
     def on_message(self, ws, message):
+        json_message = json.loads(message)
+        for trade in json_message["data"]:
+            trade["cv"] = self.cumulative_volume[trade["s"]] + trade["v"]
+            self.cumulative_volume[trade["s"]] = trade["cv"]
+        message = json.dumps(json_message)
         serialized_message = serialize_avro(json.loads(message), self.avro_schema)
         self.producer.produce(self.topic, value=serialized_message, callback=self._producer_delivery_report)
         self.producer.poll(0)
@@ -35,7 +41,7 @@ class FinnhubProducer:
         self.logger.error(error)
 
     def on_close(self, ws, close_status_code, close_msg):
-        logger.info(f"Connection closed with status code {close_status_code} and message: {close_msg}")
+        self.logger.info(f"Connection closed with status code {close_status_code} and message: {close_msg}")
 
 
     def on_open(self, ws):
@@ -68,9 +74,9 @@ class FinnhubProducer:
         try:
             self.producer.poll(1000)
             self.producer.flush()
-            logger.info("Producer flushed successfully.")
+            self.logger.info("Producer flushed successfully.")
             self.ws.close()
-            logger.info("Websocket connection closed.")
+            self.logger.info("Websocket connection closed.")
         except Exception as e:
             self.logger.error(f"Error during shutdown: {e}")
         self.logger.info("Shutdown complete.")
@@ -79,7 +85,7 @@ if __name__ == "__main__":
     API_KEY = os.getenv("FINNHUB_API_KEY")
     topic = os.getenv("KAFKA_TOPIC")
 
-    symbols = ["AAPL", "AMZN", "BINANCE:BTCUSDT", "IC MARKETS:1"]
+    symbols = ["BINANCE:BTCUSDT"]
 
     producer_config = {
         'bootstrap.servers': os.getenv("KAFKA_BOOTSTRAP_SERVERS"),
