@@ -1,5 +1,6 @@
 import json
 import os
+import threading
 import time
 
 import websocket
@@ -42,6 +43,8 @@ class FinnhubProducer:
 
     def on_close(self, ws, close_status_code, close_msg):
         self.logger.info(f"Connection closed with status code {close_status_code} and message: {close_msg}")
+        # self.logger.info("Reconnecting...")
+        # self._reconnect(5)
 
 
     def on_open(self, ws):
@@ -80,6 +83,19 @@ class FinnhubProducer:
         except Exception as e:
             self.logger.error(f"Error during shutdown: {e}")
         self.logger.info("Shutdown complete.")
+
+    def _reconnect(self, retry_attempts):
+        self.logger.info("Reconnecting...")
+        for attempt in range(retry_attempts):
+            try:
+                self.ws.run_forever()
+                break
+            except Exception as e:
+                self.logger.error(f"Connection failed: {e}. Retrying in 5 seconds...")
+                time.sleep(5)
+        else:
+            self.logger.error("Max retry attempts reached. Exiting.")
+
 
 if __name__ == "__main__":
     API_KEY = os.getenv("FINNHUB_API_KEY")
