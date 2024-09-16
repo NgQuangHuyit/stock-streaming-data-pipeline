@@ -1,12 +1,13 @@
+import time
+
 import numpy as np
 from keras._tf_keras.keras.models import load_model
 import joblib
 from pathlib import Path
 
 import pandas as pd
-from datetime import datetime as dt
-from cassandra_client import CassandraClient
 
+from BtcPrediction.kafka import KafkaClient
 
 class BTCPredictor:
     def __init__(self, model_path: str, x_scaler_path: str, y_scaler_path: str):
@@ -54,22 +55,13 @@ class BTCPredictor:
 
 
 if __name__ == "__main__":
-    client = CassandraClient(['localhost'], 'cassandra', 'password123')
-    btc_predictor = BTCPredictor('btc_lstm.keras', 'scaler_x.pkl', 'scaler_y.pkl')
+    # client = CassandraClient(['localhost'], 'cassandra', 'password123')
+    # btc_predictor = BTCPredictor('btc_lstm.keras', 'scaler_x.pkl', 'scaler_y.pkl')
 
-    with client.get_session('stock_market') as session:
-        try:
-            latest_rows = session.execute("SELECT close, high, low, num_trades, total_btc_volume, total_usd_volume FROM btc_aggregate LIMIT 100")
-            # predicted = model.predict(latest_rows)
-            df = pd.DataFrame(latest_rows.all())
-            # print(df.shape)
-            # scaled_df = x_scaler.transform(df)
-            # current_batch = scaled_df[-100:].reshape(1, 100, 6)
-            # predicted = model.predict(current_batch)
-            # predicted = y_scaler.inverse_transform(predicted)
-            # print(predicted)
-
-        except Exception as e:
-            print(f"Error: {e}")
+    kafka_consumer = KafkaClient(['localhost:9092'], 'test2', 4)
+    while True:
+        messages = kafka_consumer.get_messages()
+        print(messages)
+        time.sleep(1)
 
 

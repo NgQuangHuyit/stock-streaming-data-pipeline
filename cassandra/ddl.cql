@@ -25,3 +25,11 @@ CREATE TABLE IF NOT EXISTS stock_market.btc_aggregate (
     num_trades int,
     PRIMARY KEY (symbol, utc_end_ts)
 ) WITH CLUSTERING ORDER BY (utc_end_ts ASC );
+
+CREATE TABLE IF NOT EXISTS stock_market.btc_predict (
+    symbol text,
+    utc_timestamp timestamp,
+    curr_price double,
+    predict_price double,
+    PRIMARY KEY (symbol, utc_timestamp)
+) WITH CLUSTERING ORDER BY (utc_timestamp ASC );
