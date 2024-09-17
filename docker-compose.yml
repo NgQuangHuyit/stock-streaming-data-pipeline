@@ -128,6 +128,23 @@ services:
     networks:
       - kafka-net
 
+  minio:
+    image: 'bitnami/minio:2024'
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      - MINIO_ROOT_USER=minio
+      - MINIO_ROOT_PASSWORD=miniosecret
+    networks:
+      - kafka-net
+    volumes:
+      - 'minio_data:/bitnami/minio/data'
+
 networks:
     kafka-net:
         driver: bridge
+
+volumes:
+  minio_data:
+    driver: local

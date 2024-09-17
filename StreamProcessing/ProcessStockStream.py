@@ -49,7 +49,7 @@ class StreamingJob:
         self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.connection.ssl.enabled", "false")
         self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
         self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.connection.ssl.enabled", "false")
-        self.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.endpoint", os.getenv("MINIO_HOST"))
+        self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.endpoint", "minio:9000")
 
     def _write_to_cassandra_1(self, df, batch_id):
         df.write \
@@ -86,7 +86,7 @@ class StreamingJob:
         # Transform and aggregate volume per minute and write stream to cassandra
         volume_per_min_df = value_df \
             .select("symbol", "timestamp", "volume", "usd_volume") \
-            .withWatermark("timestamp", "1 minutes") \
+            .withWatermark("timestamp", "30 seconds") \
             .groupBy(window(col("timestamp"), "1 minutes"), col("symbol")) \
             .agg(
                 sum(col("volume")).alias("total_volume"),
@@ -99,13 +99,13 @@ class StreamingJob:
         query_01 = volume_per_min_df.writeStream \
             .outputMode("update") \
             .foreachBatch(self._write_to_cassandra_2) \
-            .trigger(processingTime="1 minute") \
+            .trigger(processingTime="30 seconds") \
             .option("checkpointLocation", "checkpoint/query_01") \
             .start()
 
         # Writestream price tracking df to cassandra
         price_df = value_df \
-            .select("symbol", "timestamp", "price", "cumulative_volume")
+            .select("symbol", "timestamp", "cumulative_volume", "price")
         query_02 = price_df.writeStream \
             .outputMode("update") \
             .foreachBatch(self._write_to_cassandra_1) \
@@ -135,7 +135,17 @@ class StreamingJob:
                     col("close"),
                     col("num_trades"))
 
-        query_03 = agg_features_df.writeStream \
+        kafka_sink_df = agg_features_df.selectExpr("symbol as key",
+                                                   """to_json(named_struct(
+                                                        "timestamp", timestamp,
+                                                        "close", close,
+                                                        "high", high,
+                                                        "low", low,
+                                                        "num_trades", num_trades,
+                                                        "total_btc_volume", total_btc_volume,
+                                                        "total_usd_volume", total_usd_volume
+                                                   )) as value""")
+        query_03 = kafka_sink_df.writeStream \
             .outputMode("append") \
             .format("kafka") \
             .option("kafka.bootstrap.servers", self.kafka_bootstrap_servers) \
@@ -149,8 +159,9 @@ class StreamingJob:
             .withColumn("hour", expr("hour(timestamp)")) \
             .writeStream \
             .format("csv") \
+            .trigger(processingTime="5 minutes") \
             .partitionBy("year", "month", "day") \
-            .option("path", "s3a://btc-features") \
+            .option("path", "s3a://featuresstore") \
             .option("checkpointLocation", "checkpoint/query_04") \
             .start()
 
