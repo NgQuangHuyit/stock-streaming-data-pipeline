@@ -1,4 +1,6 @@
-import time
+import json
+
+import pandas as pd
 from datetime import datetime as dt
 
 from confluent_kafka import Consumer
@@ -8,13 +10,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 
 
 class KafkaConsumer:
+    COLUMNS = ["timestamp", "close", "high", "low", "num_trades", "total_btc_volume", "total_usd_volume"]
     def __init__(self, bootstrap_severs: list[str], topic:str, lookback: int=100):
         self.bootstrap_severs = bootstrap_severs
         self.topic = topic
         self.lookback = lookback
         self.logger = logging.getLogger(self.__class__.__name__)
         self._connect()
-        self.messages = []
+        self.rows = pd.DataFrame([], columns=self.COLUMNS)
 
 
     def _connect(self):
@@ -22,7 +25,7 @@ class KafkaConsumer:
             self.consumer = Consumer({
                 'bootstrap.servers': ",".join(self.bootstrap_severs),
                 'group.id': f"btc_prediction_{dt.now().strftime('%Y%m%d%H%M%S')}",
-                'auto.offset.reset': 'latest'
+                'auto.offset.reset': 'earliest'
             })
             self.logger.info(f"Connected to Kafka with bootstrap servers: {self.bootstrap_severs}")
             self.consumer.subscribe([self.topic])
@@ -31,8 +34,10 @@ class KafkaConsumer:
             raise e
 
     def _process_message(self, message):
-        self.queue.append(message.value().decode('utf-8'))
-
+        mess = message.value().decode('utf-8')
+        mess = json.loads(mess)
+        row = pd.DataFrame([mess], columns=self.COLUMNS)
+        self.rows = pd.concat([self.rows, row], axis=0)
 
     def get_messages(self):
         while True:
@@ -43,11 +48,11 @@ class KafkaConsumer:
                 self.logger.error(f"Error: {message.error()}")
                 continue
             self._process_message(message)
-            if len(self.messages) < self.lookback:
+            if len(self.rows) < self.lookback:
                 continue
-            if len(self.messages) == self.lookback:
-                return self.messages
-            if len(self.messages) > self.lookback:
-                self.messages = self.messages[1:]
-                return self.messages
+            if len(self.rows) == self.lookback:
+                return self.rows
+            if len(self.rows) > self.lookback:
+                self.rows = self.rows[1:]
+                return self.rows
 

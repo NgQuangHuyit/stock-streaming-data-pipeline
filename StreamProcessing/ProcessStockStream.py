@@ -41,8 +41,8 @@ class StreamingJob:
         self._load_minio_config()
 
     def _load_minio_config(self):
-        self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.access.key", os.getenv("MINIO_ACCESS_KEY"))
-        self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.secret.key", os.getenv("MINIO_SECRET_KEY"))
+        self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.access.key", "minio")
+        self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.secret.key", "miniosecret")
         self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.aws.credentials.provider",
                                                     "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
         self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.path.style.access", "true")
@@ -169,6 +169,7 @@ class StreamingJob:
         query_02.awaitTermination()
         query_03.awaitTermination()
         query_04.awaitTermination()
+
 
 
 if __name__ == "__main__":

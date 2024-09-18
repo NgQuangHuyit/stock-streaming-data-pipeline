@@ -3,6 +3,8 @@ create-kafka-topics:
 
 delete-kafka-topics:
 	docker exec -it kafka1 kafka-topics --bootstrap-server kafka1:19092 --delete --topic stock
+	docker exec -it kafka1 kafka-topics --bootstrap-server kafka1:19092 --delete --topic btc_features
+
 
 recreate-kafka-topics: delete-kafka-topics create-kafka-topics
 

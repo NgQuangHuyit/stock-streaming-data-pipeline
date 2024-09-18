@@ -18,14 +18,13 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
   "links": [],
   "panels": [
     {
       "datasource": {
         "default": true,
         "type": "hadesarchitect-cassandra-datasource",
-        "uid": "cdy5lemwkh9tsa"
+        "uid": "cdya20l8jegw0b"
       },
       "fieldConfig": {
         "defaults": {
@@ -41,8 +40,8 @@
             "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "bars",
-            "fillOpacity": 18,
-            "gradientMode": "none",
+            "fillOpacity": 80,
+            "gradientMode": "hue",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -50,7 +49,7 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
-            "lineWidth": 2,
+            "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
@@ -70,7 +69,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "semi-dark-red",
                 "value": null
               },
               {
@@ -108,9 +107,9 @@
           "columnValue": "total_usd_volume",
           "datasource": {
             "type": "hadesarchitect-cassandra-datasource",
-            "uid": "cdy5lemwkh9tsa"
+            "uid": "cdya20l8jegw0b"
           },
-          "datasourceId": 3,
+          "datasourceId": 1,
           "keyspace": "stock_market",
           "queryType": "query",
           "refId": "A",
@@ -118,14 +117,14 @@
           "valueId": "BINANCE:BTCUSDT"
         }
       ],
-      "title": "Panel Title",
+      "title": "BTC volume per min",
       "type": "timeseries"
     },
     {
       "datasource": {
         "default": true,
         "type": "hadesarchitect-cassandra-datasource",
-        "uid": "cdy5lemwkh9tsa"
+        "uid": "cdya20l8jegw0b"
       },
       "fieldConfig": {
         "defaults": {
@@ -138,11 +137,11 @@
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
-            "barAlignment": 1,
+            "barAlignment": 0,
             "barWidthFactor": 0.6,
             "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "fillOpacity": 9,
+            "gradientMode": "opacity",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
@@ -150,6 +149,109 @@
             },
             "insertNulls": false,
             "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "columnId": "symbol",
+          "columnTime": "timestamp",
+          "columnValue": "cumulative_volume",
+          "datasource": {
+            "type": "hadesarchitect-cassandra-datasource",
+            "uid": "cdya20l8jegw0b"
+          },
+          "datasourceId": 1,
+          "keyspace": "stock_market",
+          "queryType": "query",
+          "refId": "A",
+          "table": "price_tracking",
+          "valueId": "BINANCE:BTCUSDT"
+        }
+      ],
+      "title": "BTC AC Volume",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "default": true,
+        "type": "hadesarchitect-cassandra-datasource",
+        "uid": "cdya20l8jegw0b"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 33,
+            "gradientMode": "hue",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineStyle": {
+              "fill": "solid"
+            },
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -188,7 +290,7 @@
         "x": 0,
         "y": 8
       },
-      "id": 2,
+      "id": 1,
       "options": {
         "legend": {
           "calcs": [],
@@ -205,12 +307,12 @@
         {
           "columnId": "symbol",
           "columnTime": "timestamp",
-          "columnValue": "cumulative_volume",
+          "columnValue": "price",
           "datasource": {
             "type": "hadesarchitect-cassandra-datasource",
-            "uid": "cdy5lemwkh9tsa"
+            "uid": "cdya20l8jegw0b"
           },
-          "datasourceId": 3,
+          "datasourceId": 1,
           "keyspace": "stock_market",
           "queryType": "query",
           "refId": "A",
@@ -218,14 +320,14 @@
           "valueId": "BINANCE:BTCUSDT"
         }
       ],
-      "title": "Panel Title",
+      "title": "BTC price tracking",
       "type": "timeseries"
     },
     {
       "datasource": {
         "default": true,
         "type": "hadesarchitect-cassandra-datasource",
-        "uid": "cdy5lemwkh9tsa"
+        "uid": "cdya20l8jegw0b"
       },
       "fieldConfig": {
         "defaults": {
@@ -249,7 +351,7 @@
               "viz": false
             },
             "insertNulls": false,
-            "lineInterpolation": "linear",
+            "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -285,10 +387,10 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 16
+        "x": 12,
+        "y": 8
       },
-      "id": 1,
+      "id": 4,
       "options": {
         "legend": {
           "calcs": [],
@@ -305,20 +407,65 @@
         {
           "columnId": "symbol",
           "columnTime": "timestamp",
-          "columnValue": "price",
+          "columnValue": "curr_price",
           "datasource": {
             "type": "hadesarchitect-cassandra-datasource",
-            "uid": "cdy5lemwkh9tsa"
+            "uid": "cdya20l8jegw0b"
           },
-          "datasourceId": 3,
+          "datasourceId": 1,
           "keyspace": "stock_market",
           "queryType": "query",
           "refId": "A",
-          "table": "price_tracking",
-          "valueId": "BINANCE:BTCUSDT"
+          "table": "btc_predict",
+          "valueId": "BTC"
+        },
+        {
+          "columnId": "symbol",
+          "columnTime": "timestamp",
+          "columnValue": "predict_price",
+          "datasource": {
+            "type": "hadesarchitect-cassandra-datasource",
+            "uid": "cdya20l8jegw0b"
+          },
+          "datasourceId": 1,
+          "hide": false,
+          "keyspace": "stock_market",
+          "queryType": "query",
+          "refId": "B",
+          "table": "btc_predict",
+          "valueId": "BTC"
         }
       ],
-      "title": "Panel Title",
+      "title": "Real-time BTC Prediction",
+      "transformations": [
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "config": {
+                  "id": "equal",
+                  "options": {
+                    "value": "0"
+                  }
+                },
+                "fieldName": "curr_price"
+              },
+              {
+                "config": {
+                  "id": "equal",
+                  "options": {
+                    "value": "0"
+                  }
+                },
+                "fieldName": "predict_price"
+              }
+            ],
+            "match": "any",
+            "type": "exclude"
+          }
+        }
+      ],
       "type": "timeseries"
     }
   ],
@@ -329,13 +476,12 @@
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-30m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Stock Market Tracking",
-  "uid": "ady5lkuix8jy8b",
-  "version": 2,
+  "title": "New dashboard",
+  "version": 0,
   "weekStart": ""
 }
