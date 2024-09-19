@@ -2,7 +2,7 @@
 
 ![](images/image1.png)
 
-### Project DescriptionD
+### Project Description
 
 Developed a comprehensive real-time data pipeline for stock market tracking and prediction. The system ingests trade data from the Finnhub WebSocket and produces messages to a Kafka cluster. Leveraged Spark Structured Streaming to process real-time data, which is then ingested into Cassandra, Kafka topics, and MinIO.
 
@@ -19,3 +19,5 @@ The processed data stored in Cassandra is visualized in real-time using Grafana,
 - Grafana
 
 ### Demo
+
+![](images/demo.gif)
