@@ -1,4 +1,4 @@
-### Project Overview
+    ### Project Overview
 
 ![](images/image1.png)
 
@@ -21,3 +21,7 @@ The processed data stored in Cassandra is visualized in real-time using Grafana,
 ### Demo
 
 ![](images/demo.gif)
+
+Airflow Dag:
+
+![](images/airflow-streaming-dag.png)

@@ -1,14 +1,13 @@
-from pyspark.sql import SparkSession
+import argparse
+
+from pyspark.sql import SparkSession, DataFrame
 from pyspark.sql.functions import col, explode, timestamp_millis, window, sum, last, round, max, min, expr, count
 from pyspark.sql.avro.functions import from_avro
-import os
+import logging
 
-def write_to_cassandra(df, batch_id):
-    df.write \
-        .format("org.apache.spark.sql.cassandra") \
-        .options(table="btc_aggregate", keyspace="stock_market") \
-        .mode("append") \
-        .save()
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
 
 class StreamingJob:
     KEYSPACE = "stock_market"
@@ -17,19 +16,30 @@ class StreamingJob:
     SOURCE_TOPIC = "stock"
     SCHEMA_PATH = "schemas/trades.avsc"
 
-    def __init__(self, cassandra_cluster, cassandra_user, cassandra_password, kafka_bootstrap_servers):
+    def __init__(self,
+                 cassandra_cluster,
+                 cassandra_user,
+                 cassandra_password,
+                 kafka_bootstrap_servers,
+                 minio_access_key,
+                 minio_secret_key,
+                 minio_endpoint,
+                 avro_schema_path):
+
         self.cassandra_cluster = cassandra_cluster
         self.cassandra_user = cassandra_user
         self.cassandra_password = cassandra_password
         self.kafka_bootstrap_servers = kafka_bootstrap_servers
+        self.minio_access_key = minio_access_key
+        self.minio_secret_key = minio_secret_key
+        self.minio_endpoint = minio_endpoint
+        self.logger = logging.getLogger(__name__)
+        self.avro_schema_path = avro_schema_path
 
+        self.logger.info("Initializing Spark session")
         self.spark = SparkSession.builder \
             .appName("StockStreamProcessor") \
-            .master("local[*]") \
             .config("spark.streaming.stopGracefullyOnShutdown", "true") \
-            .config("spark.jars.packages", "org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1,"
-                                           "org.apache.spark:spark-avro_2.12:3.5.1,"
-                                           "com.datastax.spark:spark-cassandra-connector_2.12:3.5.1") \
             .config("spark.sql.extensions", "com.datastax.spark.connector.CassandraSparkExtensions") \
             .config("spark.cassandra.auth.username", self.cassandra_user) \
             .config("spark.cassandra.auth.password", self.cassandra_password) \
@@ -41,31 +51,45 @@ class StreamingJob:
         self._load_minio_config()
 
     def _load_minio_config(self):
-        self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.access.key", "minio")
-        self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.secret.key", "miniosecret")
+        self.logger.info("Configuring MinIO")
+        self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.access.key", self.minio_access_key)
+        self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.secret.key", self.minio_secret_key)
         self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.aws.credentials.provider",
                                                     "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider")
         self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.path.style.access", "true")
         self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.connection.ssl.enabled", "false")
         self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
         self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.connection.ssl.enabled", "false")
-        self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.endpoint", "minio:9000")
+        self.spark.sparkContext._jsc.hadoopConfiguration().set("fs.s3a.endpoint", self.minio_endpoint)
 
-    def _write_to_cassandra_1(self, df, batch_id):
-        df.write \
-            .format("org.apache.spark.sql.cassandra") \
-            .options(table=self.PRICE_TABLE_NAME, keyspace=self.KEYSPACE) \
-            .mode("append") \
-            .save()
+    def _write_to_cassandra_1(self, df: DataFrame, batch_id):
+        self.logger.info(f"Writing micro-batch {batch_id} to Cassandra table {self.PRICE_TABLE_NAME} ")
+        try:
+            df.write \
+                .format("org.apache.spark.sql.cassandra") \
+                .options(table=self.PRICE_TABLE_NAME, keyspace=self.KEYSPACE) \
+                .mode("append") \
+                .save()
+            self.logger.info(f"Micro-batch {batch_id} written to Cassandra table {self.PRICE_TABLE_NAME}")
+        except Exception as e:
+            self.logger.error(f"Error writing micro-batch {batch_id} to Cassandra table {self.PRICE_TABLE_NAME}: {e}")
+
+
 
     def _write_to_cassandra_2(self, df, batch_id):
-        df.write \
-            .format("org.apache.spark.sql.cassandra") \
-            .options(table=self.VOLUME_TABLE_NAME, keyspace=self.KEYSPACE) \
-            .mode("append") \
-            .save()
+        self.logger.info(f"Writing micro-batch {batch_id} to Cassandra table {self.VOLUME_TABLE_NAME}")
+        try:
+            df.write \
+                .format("org.apache.spark.sql.cassandra") \
+                .options(table=self.VOLUME_TABLE_NAME, keyspace=self.KEYSPACE) \
+                .mode("append") \
+                .save()
+            self.logger.info(f"Micro-batch {batch_id} written to Cassandra table {self.VOLUME_TABLE_NAME}")
+        except Exception as e:
+            self.logger.error(f"Error writing micro-batch {batch_id} to Cassandra table {self.VOLUME_TABLE_NAME}: {e}")
 
     def run(self):
+        self.logger.info("Starting stream processing job")
         kafka_source = self.spark.readStream \
             .format("kafka") \
             .option("kafka.bootstrap.servers", self.kafka_bootstrap_servers) \
@@ -73,7 +97,8 @@ class StreamingJob:
             .option("startingOffsets", "earliest") \
             .load()
 
-        avro_schema = open(self.SCHEMA_PATH).read()
+        avro_schema = open(self.avro_schema_path).read()
+
         value_df = kafka_source.select(from_avro(col("value"), avro_schema).alias("value")) \
             .select("value.*") \
             .select(explode(col("data")), col("type")) \
@@ -100,7 +125,7 @@ class StreamingJob:
             .outputMode("update") \
             .foreachBatch(self._write_to_cassandra_2) \
             .trigger(processingTime="30 seconds") \
-            .option("checkpointLocation", "checkpoint/query_01") \
+            .option("checkpointLocation", "s3a://checkpoints/query_01") \
             .start()
 
         # Writestream price tracking df to cassandra
@@ -109,7 +134,7 @@ class StreamingJob:
         query_02 = price_df.writeStream \
             .outputMode("update") \
             .foreachBatch(self._write_to_cassandra_1) \
-            .option("checkpointLocation", "checkpoint/query_02") \
+            .option("checkpointLocation", "s3a://checkpoints/query_02") \
             .start()
 
         # Transform and aggregate to calculate features for ML model,
@@ -150,7 +175,7 @@ class StreamingJob:
             .format("kafka") \
             .option("kafka.bootstrap.servers", self.kafka_bootstrap_servers) \
             .option("topic", "btc_features") \
-            .option("checkpointLocation", "checkpoint/query_03") \
+            .option("checkpointLocation", "s3a://checkpoints/query_03") \
             .start()
 
         query_04 = agg_features_df.withColumn("year", expr("year(timestamp)")) \
@@ -162,7 +187,7 @@ class StreamingJob:
             .trigger(processingTime="5 minutes") \
             .partitionBy("year", "month", "day") \
             .option("path", "s3a://featuresstore") \
-            .option("checkpointLocation", "checkpoint/query_04") \
+            .option("checkpointLocation", "s3a://checkpoints/query_04") \
             .start()
 
         query_01.awaitTermination()
@@ -173,6 +198,25 @@ class StreamingJob:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
 
-    spark_job = StreamingJob("cassandra", "cassandra", "password123", "kafka1:19092")
+    parser.add_argument("--cassandra-cluster", type=str, required=True)
+    parser.add_argument("--cassandra-user", type=str, required=True)
+    parser.add_argument("--cassandra-password", type=str, required=True)
+    parser.add_argument("--kafka-bootstrap-servers", type=str, required=True)
+    parser.add_argument("--minio-access-key", type=str, required=True)
+    parser.add_argument("--minio-secret-key", type=str, required=True)
+    parser.add_argument("--minio-endpoint", type=str, required=True)
+    parser.add_argument("--avro-schema-path", type=str, required=True)
+
+    args = parser.parse_args()
+
+    spark_job = StreamingJob(cassandra_cluster=args.cassandra_cluster,
+                             cassandra_user=args.cassandra_user,
+                             cassandra_password=args.cassandra_password,
+                             kafka_bootstrap_servers=args.kafka_bootstrap_servers,
+                             minio_access_key=args.minio_access_key,
+                             minio_secret_key=args.minio_secret_key,
+                             minio_endpoint=args.minio_endpoint,
+                             avro_schema_path=args.avro_schema_path)
     spark_job.run()

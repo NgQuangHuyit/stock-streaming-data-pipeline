@@ -1,21 +1,35 @@
-from confluent_kafka.admin import AdminClient, NewTopic
+import argparse
 
-def create_kafka_topic(kafka_servers: str, topic: str, n_stocks: int=1, n_nodes=1):
+from confluent_kafka.admin import AdminClient, NewTopic
+import logging
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+logger = logging.getLogger(__name__)
+
+def create_kafka_topic(kafka_servers: str, topics: list[str]):
     conf = {
         "bootstrap.servers": kafka_servers
     }
     admin_client = AdminClient(conf)
-    if topic not in admin_client.list_topics().topics:
-        topic_list = [NewTopic(topic, num_partitions=n_stocks, replication_factor=n_nodes)]
-        fs = admin_client.create_topics(topic_list)
-        for topic, f in fs.items():
-            try:
-                f.result()
-                print(f"Topic {topic} created")
-            except Exception as e:
-                print(f"Failed to create topic {topic}: {e}")
-    else:
-        print(f"Topic {topic} is already created")
-
-if __name__ == "__main__":
-    create_kafka_topic("localhost:9092", "stock2", 1, 1)
+    logger.info(f"Creating topics: {topics}")
+    new_topics = []
+    metadata = admin_client.list_topics(timeout=10)
+    existing_topics = metadata.topics.keys()
+    for topic in topics:
+        if topic in existing_topics:
+            logger.info(f"Topic {topic} already exists")
+        else:
+            new_topic = NewTopic(topic, num_partitions=1, replication_factor=1)
+            new_topics.append(new_topic)
+    if not new_topics:
+        logger.info("No new topics to create")
+        return
+    fs = admin_client.create_topics(new_topics)
+    for topic, f in fs.items():
+        try:
+            f.result()
+            logger.info(f"Topic {topic} created")
+        except Exception as e:
+            logger.error(f"Failed to create topic {topic}: {e}")

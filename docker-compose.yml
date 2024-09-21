@@ -1,4 +1,4 @@
-version: "2.1"
+version: "3"
 
 services:
   zoo1:
@@ -11,8 +11,6 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_SERVER_ID: 1
       ZOOKEEPER_SERVERS: zoo1:2888:3888
-    networks:
-      - kafka-net
 
   kafka1:
     image: confluentinc/cp-kafka:7.3.2
@@ -38,28 +36,26 @@ services:
       KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
     depends_on:
       - zoo1
-    networks:
-      - kafka-net
-  finnhub-producer:
-    image: finnhub-producer:latest
-    container_name: finnhub-producer
-    build:
-      context: ./FinnhubProducer
-      dockerfile: Dockerfile
-    volumes:
-      - ./FinnhubProducer/src:/app
-    environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka1:19092
-      - KAFKA_TOPIC=stock
-      - FINNHUB_API_KEY={Your Finnhub API Key}
-    depends_on:
-      - kafka1
-      - zoo1
-    networks:
-      - kafka-net
+
+#  finnhub-producer:
+#    image: finnhub-producer:latest
+#    container_name: finnhub-producer
+#    build:
+#      context: ./FinnhubProducer
+#      dockerfile: Dockerfile
+#    volumes:
+#      - ./FinnhubProducer/src:/app
+#    environment:
+#      - KAFKA_BOOTSTRAP_SERVERS=kafka1:19092
+#      - KAFKA_TOPIC=stock
+#      - FINNHUB_API_KEY={Your Finnhub API Key}
+#    depends_on:
+#      - kafka1
+#      - zoo1
+
 
   spark-master:
-    image: docker.io/bitnami/spark:3.5.1
+    image: docker.io/bitnami/spark:3.5.2
     container_name: spark-master
     user: root
     environment:
@@ -69,28 +65,24 @@ services:
       - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
       - SPARK_SSL_ENABLED=no
       - SPARK_USER=spark
-    networks:
-      - kafka-net
     volumes:
       - ./StreamProcessing:/opt/bitnami/spark/apps
     ports:
       - '8080:8080'
       - '7077:7077'
-#  spark-worker1:
-#    image: docker.io/bitnami/spark:3.5.1
-#    environment:
-#      - SPARK_MODE=worker
-#      - SPARK_MASTER_URL=spark://spark-master:7077
-#      - SPARK_RPC_AUTHENTICATION_ENABLED=no
-#      - SPARK_RPC_ENCRYPTION_ENABLED=no
-#      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-#      - SPARK_SSL_ENABLED=no
-#      - SPARK_USER=spark
-#    networks:
-#      - kafka-net
-#    depends_on:
-#      - spark-master
-#
+  spark-worker1:
+    image: docker.io/bitnami/spark:3.5.2
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_USER=spark
+    depends_on:
+      - spark-master
+
 #  spark-worker2:
 #    image: docker.io/bitnami/spark:3.5.1
 #    environment:
@@ -115,8 +107,6 @@ services:
       - CASSANDRA_PASSWORD_SEEDER=yes
       - CASSANDRA_USER=cassandra
       - CASSANDRA_PASSWORD=password123
-    networks:
-      - kafka-net
 
   grafana:
     image: grafana/grafana:latest
@@ -125,19 +115,17 @@ services:
       - GF_INSTALL_PLUGINS=hadesarchitect-cassandra-datasource
     ports:
       - "3000:3000"
-    networks:
-      - kafka-net
 
   minio:
     image: 'bitnami/minio:2024'
+    container_name: minio
     ports:
       - '9000:9000'
       - '9001:9001'
     environment:
       - MINIO_ROOT_USER=minio
       - MINIO_ROOT_PASSWORD=miniosecret
-    networks:
-      - kafka-net
+      - MINIO_DEFAULT_BUCKETS=featuresstore:private,models:private,checkpoints:private
     volumes:
       - 'minio_data:/bitnami/minio/data'
 

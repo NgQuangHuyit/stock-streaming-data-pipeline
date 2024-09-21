@@ -1,0 +1,6 @@
+apache-airflow-providers-apache-spark==4.10.0
+finnhub-python==2.4.20
+websocket-client==1.8.0
+confluent-kafka==2.5.3
+avro-python3==1.10.2
+cassandra-driver==3.29.2

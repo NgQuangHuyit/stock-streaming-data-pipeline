@@ -1,6 +1,7 @@
+import argparse
 import json
 import os
-import threading
+
 import time
 
 import websocket
@@ -98,16 +99,27 @@ class FinnhubProducer:
 
 
 if __name__ == "__main__":
-    API_KEY = os.getenv("FINNHUB_API_KEY")
-    topic = os.getenv("KAFKA_TOPIC")
 
-    symbols = ["BINANCE:BTCUSDT"]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--api_key", type=str, required=True)
+    parser.add_argument("--topic", type=str, required=True)
+    parser.add_argument("--symbols", type=str, required=True)
+    parser.add_argument("--bootstrap-servers", type=str, required=True)
+    parser.add_argument("--schema-path", type=str, required=True)
 
+    args = parser.parse_args()
+
+    API_KEY = args.api_key
+    topic = args.topic
+    symbols = args.symbols.split(",")
+    bootstrap_servers = args.bootstrap_servers
+    schema_path = args.schema_path
     producer_config = {
-        'bootstrap.servers': os.getenv("KAFKA_BOOTSTRAP_SERVERS"),
+        'bootstrap.servers': bootstrap_servers,
     }
+
     kafka_producer = Producer(producer_config)
-    producer = FinnhubProducer(API_KEY, "stock", symbols, kafka_producer, "schemas/trades.avsc")
+    producer = FinnhubProducer(API_KEY, "stock", symbols, kafka_producer, schema_path)
     producer.start()
 
 

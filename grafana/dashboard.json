@@ -18,14 +18,11 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
+  "id": 1,
   "links": [],
   "panels": [
     {
-      "datasource": {
-        "default": true,
-        "type": "hadesarchitect-cassandra-datasource",
-        "uid": "cdya20l8jegw0b"
-      },
+      "datasource": {},
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -121,11 +118,7 @@
       "type": "timeseries"
     },
     {
-      "datasource": {
-        "default": true,
-        "type": "hadesarchitect-cassandra-datasource",
-        "uid": "cdya20l8jegw0b"
-      },
+      "datasource": {},
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -224,7 +217,7 @@
       "datasource": {
         "default": true,
         "type": "hadesarchitect-cassandra-datasource",
-        "uid": "cdya20l8jegw0b"
+        "uid": "edyju1yjf7bb4a"
       },
       "fieldConfig": {
         "defaults": {
@@ -267,6 +260,7 @@
               "mode": "off"
             }
           },
+          "decimals": 3,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -481,7 +475,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "New dashboard",
-  "version": 0,
+  "title": "BTC-tracking",
+  "uid": "edyju50x9o2kgd",
+  "version": 5,
   "weekStart": ""
 }
